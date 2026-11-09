@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: bager-site-link-pilot
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: SESSION_HOURS
+        value: "14"
+      - key: DATABASE_URL
+        sync: false
+      - key: BAGER_ADMIN_PASSWORD
+        sync: false
