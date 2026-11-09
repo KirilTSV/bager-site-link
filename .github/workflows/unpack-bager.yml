@@ -1,0 +1,43 @@
+name: Unpack BAGER SITE LINK
+on:
+  push:
+    paths:
+      - '.github/workflows/unpack-bager.yml'
+      - 'BAGER_SITE_LINK_DOWNLOAD_RETRY.zip'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract application files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          archive = Path('BAGER_SITE_LINK_DOWNLOAD_RETRY.zip')
+          with ZipFile(archive) as z:
+              for info in z.infolist():
+                  target = Path(info.filename)
+                  if info.is_dir():
+                      continue
+                  if target.is_absolute() or '..' in target.parts or target.parts[0] == '.github':
+                      raise ValueError(f'Unsafe path: {info.filename}')
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(z.read(info))
+          assert Path('Dockerfile').is_file()
+          assert Path('requirements.txt').is_file()
+          assert Path('app/main.py').is_file()
+          PY
+      - name: Commit extracted source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'Unpack BAGER SITE LINK application source'
+            git push
+          fi
+          
