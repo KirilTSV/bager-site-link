@@ -36,7 +36,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 async def verify_same_origin(request: Request, call_next):
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         origin = request.headers.get("origin")
-        if origin and urlparse(origin).netloc.lower() not in {request.headers.get("host", "").lower(), "bager-site-link-pilot.onrender.com"}
+        if origin and urlparse(origin).netloc.lower() not in {request.headers.get("host", "").lower(), "bager-site-link-pilot.onrender.com"}:
             return JSONResponse({"detail": "Заявка от чужд произход е блокирана"}, status_code=403)
     return await call_next(request)
 Base.metadata.create_all(bind=engine)
