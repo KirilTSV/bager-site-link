@@ -30,6 +30,7 @@ async function ensureGps(){
     const p=legacy[i];
     if(!p||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||typeof p.device_event_id!=='string'||p.device_event_id.length>80){valid=false;break}
    }
+   if(valid&&new Set(legacy.map(p=>p.device_event_id)).size!==legacy.length){valid=false;console.warn('Legacy GPS queue retained; duplicate event IDs detected')}
    if(valid){
     for(let i=0;i<legacy.length;i++){const p=legacy[i];const id=engine.prefix+'legacy:'+p.device_event_id;await store.put({id,created:Date.parse(p.recorded_at)||Date.now(),payload:p})}
     localStorage.removeItem(oldKey);
