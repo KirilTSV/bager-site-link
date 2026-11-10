@@ -22,10 +22,18 @@ async function ensureGps(){
   const engine=new GpsEngineV03({store,api,geo:navigator.geolocation,actorId,deviceId,onUpdate:gpsMessage,onPosition:p=>{lastPosition={coords:{latitude:p.latitude,longitude:p.longitude,accuracy:p.accuracy},timestamp:p.timestamp}}});
   // Migrate the legacy localStorage queue before deleting its old copy.
   const oldKey='bagerGpsQueue:'+actorId;
-  const legacy=JSON.parse(localStorage.getItem(oldKey)||'[]');
+  let legacy=null;
+  try{const raw=localStorage.getItem(oldKey);if(raw!==null)legacy=JSON.parse(raw)}catch(e){console.warn('Legacy GPS queue retained; invalid JSON or storage error',e)}
   if(Array.isArray(legacy)&&legacy.length){
-   for(let i=0;i<legacy.length;i++){const p=legacy[i];if(!p||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude))continue;const id=engine.prefix+'legacy:'+String(p.device_event_id||i);await store.put({id,created:Date.parse(p.recorded_at)||Date.now(),payload:p})}
-   localStorage.removeItem(oldKey);
+   let valid=true;
+   for(let i=0;i<legacy.length;i++){
+    const p=legacy[i];
+    if(!p||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||typeof p.device_event_id!=='string'||p.device_event_id.length>80){valid=false;break}
+   }
+   if(valid){
+    for(let i=0;i<legacy.length;i++){const p=legacy[i];const id=engine.prefix+'legacy:'+p.device_event_id;await store.put({id,created:Date.parse(p.recorded_at)||Date.now(),payload:p})}
+    localStorage.removeItem(oldKey);
+   }else{console.warn('Legacy GPS queue retained; invalid point detected')}
   }
   gpsEngine=engine;
   if(!gpsRetryTimer)gpsRetryTimer=setInterval(()=>{if(!document.hidden&&navigator.onLine)void gpsEngine?.flush()},30000);
