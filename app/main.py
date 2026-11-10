@@ -188,6 +188,11 @@ def logout(request: Request, db: Session=Depends(get_db)):
 def me(p: Participant=Depends(require_user),db:Session=Depends(get_db)):
     project=project_for(db,p); return {"id":p.id,"name":p.display_name,"role":p.role,"role_label":ROLE_LABELS.get(p.role,p.role),"project":{"id":project.id,"code":project.code,"name":project.name,"address":project.address}}
 
+@app.get("/api/shift/status")
+def shift_status(p: Participant=Depends(require_user), db: Session=Depends(get_db)):
+    shift=get_open_shift(db,p)
+    return {"active":shift is not None,"shift_id":shift.id if shift else None}
+
 @app.post("/api/shift/start")
 def shift_start(p:Participant=Depends(require_user),db:Session=Depends(get_db)):
     if get_open_shift(db,p): return {"ok":True,"message":"Смяната вече е активна"}
