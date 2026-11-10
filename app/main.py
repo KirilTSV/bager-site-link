@@ -352,12 +352,15 @@ def operations(p:Participant=Depends(require_roles("owner","dispatcher","site_ma
         estimated=sum(t.volume_m3 for t in linked if t.confidence!="confirmed")
         # Only intervals with actual load tickets and timestamps; no fabricated working hours.
         times=[]
+        timed_volume=0.0
         for ticket in linked:
             trip=next((t for t in trips if t.id==ticket.trip_id),None)
             if trip and trip.loading_started_at and trip.loaded_at:
                 start=trip.loading_started_at.replace(tzinfo=timezone.utc) if trip.loading_started_at.tzinfo is None else trip.loading_started_at
                 end=trip.loaded_at.replace(tzinfo=timezone.utc) if trip.loaded_at.tzinfo is None else trip.loaded_at
-                if end>start: times.append((start,end))
+                if end>start:
+                    times.append((start,end))
+                    timed_volume+=ticket.volume_m3
         # Merge overlapping loading intervals to avoid double-counting machine time.
         merged=[]
         for start,end in sorted(times):
@@ -365,9 +368,9 @@ def operations(p:Participant=Depends(require_roles("owner","dispatcher","site_ma
             else: merged.append((start,end))
         hours=sum((end-start).total_seconds() for start,end in merged)/3600
         excavators.append({"excavator":asset.code,"confirmed_loose_m3":round(confirmed,3),
-                           "estimated_loose_m3":round(estimated,3),"ticket_count":len(linked),
+                           "estimated_loose_m3":round(estimated,3),"ticket_count":len(linked),"timed_ticket_loose_m3":round(timed_volume,3),
                            "documented_loading_hours":round(hours,3),
-                           "indicative_loading_m3_per_hour":round((confirmed+estimated)/hours,2) if hours>0 and linked else None,
+                           "indicative_loading_m3_per_hour":round(timed_volume/hours,2) if hours>0 and timed_volume>0 else None,
                            "productivity_warning":"Само обем по товарни билети / отчетено време за товарене; не е реална производителност за цяла смяна."})
     return {"as_of":now.isoformat(),"volume_unit":"loose_loaded_m3","fleet":fleet,"excavators":excavators,
             "completed_trips":sum(t.status=="completed" for t in trips),
