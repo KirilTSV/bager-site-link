@@ -314,6 +314,68 @@ def dashboard(p:Participant=Depends(require_roles("owner","dispatcher","site_man
     gps_count=db.query(GpsPoint).filter_by(project_id=p.project_id).count()
     return {"project":project_for(db,p).name,"trips_total":len(ts),"trips_active":sum(1 for t in ts if t.status not in ("completed","cancelled")),"trips_completed":sum(1 for t in ts if t.status=="completed"),"confirmed_m3":round(confirmed,3),"estimated_m3":round(estimated,3),"gps_points":gps_count,"trucks":truck_rows}
 
+@app.get("/api/operations")
+def operations(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
+    """Auditable operational snapshot. Volume is loose loaded m³, not in-situ excavation."""
+    now=utcnow()
+    trips=db.query(Trip).filter_by(project_id=p.project_id).all()
+    tickets={t.trip_id:t for t in db.query(LoadTicket).filter_by(project_id=p.project_id).all()}
+    assets={a.id:a for a in db.query(Asset).filter_by(project_id=p.project_id).all()}
+    people={d.id:d for d in db.query(Participant).filter_by(project_id=p.project_id).all()}
+    gps={}
+    for point in db.query(GpsPoint).filter_by(project_id=p.project_id).order_by(desc(GpsPoint.recorded_at)).all():
+        if point.asset_id and point.asset_id not in gps:
+            gps[point.asset_id]=point
+    fleet=[]
+    for asset in assets.values():
+        if asset.asset_type!="dump_truck": continue
+        assigned=next((d for d in people.values() if d.asset_id==asset.id and d.role=="driver" and d.status=="active"),None)
+        active=next((t for t in trips if t.truck_asset_id==asset.id and t.status not in ("completed","cancelled")),None)
+        pt=gps.get(asset.id)
+        age=None
+        if pt:
+            received=pt.received_at.replace(tzinfo=timezone.utc) if pt.received_at.tzinfo is None else pt.received_at
+            age=max(0,int((now-received).total_seconds()))
+        ticket=tickets.get(active.id) if active else None
+        fleet.append({"truck":asset.code,"driver":assigned.display_name if assigned else None,
+                      "status":active.status if active else ("available" if assigned else "no_driver"),
+                      "trip_number":active.trip_number if active else None,
+                      "cargo_m3":ticket.volume_m3 if ticket else None,
+                      "cargo_basis":ticket.volume_basis if ticket else None,
+                      "gps":({"lat":pt.latitude,"lon":pt.longitude,"age_sec":age,"stale":age>90,"accuracy_m":pt.accuracy_m} if pt else None),
+                      "completed_trips":sum(t.status=="completed" for t in trips if t.truck_asset_id==asset.id)})
+    excavators=[]
+    for asset in assets.values():
+        if asset.asset_type!="tracked_excavator": continue
+        linked=[ticket for ticket in tickets.values() if ticket.excavator_asset_id==asset.id]
+        confirmed=sum(t.volume_m3 for t in linked if t.confidence=="confirmed")
+        estimated=sum(t.volume_m3 for t in linked if t.confidence!="confirmed")
+        # Only intervals with actual load tickets and timestamps; no fabricated working hours.
+        times=[]
+        for ticket in linked:
+            trip=next((t for t in trips if t.id==ticket.trip_id),None)
+            if trip and trip.loading_started_at and trip.loaded_at:
+                start=trip.loading_started_at.replace(tzinfo=timezone.utc) if trip.loading_started_at.tzinfo is None else trip.loading_started_at
+                end=trip.loaded_at.replace(tzinfo=timezone.utc) if trip.loaded_at.tzinfo is None else trip.loaded_at
+                if end>start: times.append((start,end))
+        # Merge overlapping loading intervals to avoid double-counting machine time.
+        merged=[]
+        for start,end in sorted(times):
+            if merged and start<=merged[-1][1]: merged[-1]=(merged[-1][0],max(merged[-1][1],end))
+            else: merged.append((start,end))
+        hours=sum((end-start).total_seconds() for start,end in merged)/3600
+        excavators.append({"excavator":asset.code,"confirmed_loose_m3":round(confirmed,3),
+                           "estimated_loose_m3":round(estimated,3),"ticket_count":len(linked),
+                           "documented_loading_hours":round(hours,3),
+                           "indicative_loading_m3_per_hour":round((confirmed+estimated)/hours,2) if hours>0 and linked else None,
+                           "productivity_warning":"Само обем по товарни билети / отчетено време за товарене; не е реална производителност за цяла смяна."})
+    return {"as_of":now.isoformat(),"volume_unit":"loose_loaded_m3","fleet":fleet,"excavators":excavators,
+            "completed_trips":sum(t.status=="completed" for t in trips),
+            "active_trips":sum(t.status not in ("completed","cancelled") for t in trips),
+            "confirmed_loose_m3":round(sum(t.volume_m3 for t in tickets.values() if t.confidence=="confirmed"),3),
+            "estimated_loose_m3":round(sum(t.volume_m3 for t in tickets.values() if t.confidence!="confirmed"),3)}
+
+
 @app.get("/api/activity")
 def activity(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
     rows=db.query(Event).filter_by(project_id=p.project_id).order_by(desc(Event.recorded_at)).limit(30).all(); out=[]
