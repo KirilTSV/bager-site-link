@@ -32,7 +32,7 @@ export class GpsEngineV03 {
     Object.assign(this,{store,api,geo,actorId,deviceId,now,onUpdate,onPosition,interval,maxPending});
     this.prefix=`${actorId}:${deviceId}:`;this.sequence=0;this.watchId=null;this.running=false;this.accepting=Promise.resolve();this.lastRecorded=-Infinity;this.flushing=null;this.state='idle';this.lastConfirmed=null;this.error=null;this.pending=null;
   }
-  emit(state,error=null){this.state=state;this.error=error;this.onUpdate({state,error,pending:this.pending,lastConfirmed:this.lastConfirmed});}
+  emit(state,error=null){this.state=state;this.error=error;try{this.onUpdate({state,error,pending:this.pending,lastConfirmed:this.lastConfirmed});}catch(e){console.warn('GPS status observer failed',e);}}
   async count(){const list=await this.store.list(this.prefix);this.pending=list.length;return list.length;}
   async accept(pos){
     if(!this.running)return false;
