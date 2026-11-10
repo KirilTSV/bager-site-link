@@ -4,6 +4,8 @@ on:
     branches:
       - staging/gps-v034-validation
   workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *' # Daily UTC, staging only
 permissions:
   contents: read
 jobs:
@@ -34,6 +36,25 @@ jobs:
         run: find tests -type f -name '*.test.mjs' -print0 | xargs -0 -r node --test
       - name: Isolated API regression tests
         run: python tests/run_isolated.py
+      - name: Validate free-hosting configuration (no credentials or deployment)
+        env:
+          POSTGRES_PASSWORD: ci-placeholder-not-a-secret
+          BAGER_ADMIN_PASSWORD: ci-placeholder-not-a-secret
+          BAGER_DOMAIN: example.invalid
+        run: |
+          docker compose -f deploy/free/docker-compose.yml config --quiet
+          sh -n deploy/free/backup.sh
+          sh -n deploy/free/restore.sh
+          python - <<'PY'
+          from pathlib import Path
+          compose = Path("deploy/free/docker-compose.yml").read_text()
+          assert 'postgres_data:' in compose, "Postgres persistence missing"
+          assert '5432:5432' not in compose, "Database must not be published"
+          assert 'COOKIE_SECURE: "1"' in compose, "HTTPS cookie protection missing"
+          for secret in ('POSTGRES_PASSWORD', 'BAGER_ADMIN_PASSWORD', 'BAGER_DOMAIN'):
+              assert '${'+secret+':?' in compose, f"Fail-closed check missing: {secret}"
+          print("Free-hosting static guardrails OK")
+          PY
       - name: Record exact tested revision
         if: always()
         run: |
