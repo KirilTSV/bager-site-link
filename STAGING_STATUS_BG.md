@@ -27,3 +27,12 @@
 - `static/field-command.css` качен (commit `3ac1dfd3b871e3e2cd219e430ef8ad60a0da5d7e`). Също не е байтово идентичен с локалния архив.
 - **Блокери:** липсва `static/gps-reliability.mjs`; не са синхронизирани `static/app.js` и `templates/app.html`; няма потвърден CI резултат върху крайния commit; няма браузърен/Android тест.
 - **Не се допуска Render deployment** преди пълно свързване и потвърдени тестове. Няма промяна в `main`.
+
+## 10.11.2026 — реално свързване на GPS UI
+
+- `static/app.js` интегрира `GpsEngineV03` + `IndexedGpsStore`, възстановява GPS при активна смяна и опитва синхронизация при възстановяване на връзката; commit `2e081b1edd74b263e407d75d86d5497cc8c208e0`.
+- `templates/app.html` зарежда Field Command CSS и JS; commit `85bfd14d7a4d64e44494259522638922d120abd9`.
+- `tests/gps-wiring.test.mjs` проверява статично връзките; GitHub Actions workflow включва теста (commit `d7d73ce28ed809a36b50414623b2c27b2ef3dc4b`).
+- Прочетени обратно от GitHub и проверени като текст: `static/app.js`, `templates/app.html`, `static/field-command.js`, `static/field-command.css`, `static/gps-v03.mjs`.
+- **Все още липсва** `static/gps-reliability.mjs` от локалния архив; v0.3 GPS двигателят не го импортира пряко, но пълна байтова синхронизация с v0.3.4 не е постигната.
+- **Няма потвърден зелен GitHub Actions run за крайния commit**. Не са проведени браузърни, Android или PostgreSQL тестове. Следователно staging НЕ е готов за Render.
