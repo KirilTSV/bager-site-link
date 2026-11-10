@@ -14,3 +14,13 @@ test('stopped engine does not accept points',async()=>{const {e,store}=setup();e
 test('delete failure retains durable point',async()=>{const s=new Store();const {e}=setup(s,async()=>{s.fail=true;return {ok:true}});await e.accept(pos());await e.flush();assert.equal(s.m.size,1);assert.equal(e.state,'storage_error')});
 test('unavailable geolocation cannot leave engine running',async()=>{const {e}=setup();e.running=false;e.geo=null;e.start();assert.equal(e.running,false);assert.equal(e.state,'unavailable')});
 test('GPS watch callbacks are serialized to preserve distinct fixes',async()=>{const s=new Store();let callback;const e=new GpsEngineV03({store:s,api:async()=>{throw Error('offline')},geo:{watchPosition:fn=>{callback=fn;return 7},clearWatch:()=>{}},actorId:'user',deviceId:'phone',now:()=>time+30000});e.start();callback(pos(time));callback(pos(time+16000));await e.accepting;await e.flush();assert.equal(s.m.size,2);e.stop()});
+
+test('UI position callback failure cannot discard valid durable GPS fix',async()=>{
+ const store=new Store();
+ const e=new GpsEngineV03({store,api:async()=>{throw Error('offline')},actorId:'user',deviceId:'phone',now:()=>time,onPosition:()=>{throw Error('broken map UI')}});
+ e.running=true;
+ assert.equal(await e.accept(pos()),true);
+ await e.flush();
+ assert.equal(store.m.size,1);
+ assert.equal(e.state,'pending_sync');
+});
