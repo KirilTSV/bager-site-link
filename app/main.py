@@ -50,7 +50,7 @@ class GpsIn(BaseModel):
     speed_mps: float | None = Field(default=None, ge=0, le=150)
     heading_deg: float | None = Field(default=None, ge=0, le=360)
     recorded_at: datetime | None = None
-    device_event_id: str | None = None
+    device_event_id: str | None = Field(default=None, min_length=1, max_length=80)
 
 class TicketIn(BaseModel):
     trip_id: str
@@ -208,6 +208,9 @@ def gps(point:GpsIn,p:Participant=Depends(require_user),db:Session=Depends(get_d
     if p.role not in ("driver","operator","site_manager","dispatcher"): raise HTTPException(403,"GPS не е разрешен за тази роля")
     shift=get_open_shift(db,p)
     recorded=dt_utc(point.recorded_at) if point.recorded_at else utcnow()
+    # Resolve the shift using measurement time to avoid attaching offline points to a newer shift.
+    if shift and recorded < dt_utc(shift.started_at):
+        shift=None
     if not shift:
         # Allow delayed offline sync only when the recorded time falls inside a recently closed shift.
         shift=db.query(Shift).filter(Shift.participant_id==p.id,Shift.status=="closed",Shift.started_at<=recorded,Shift.ended_at>=recorded).order_by(desc(Shift.started_at)).first()
@@ -215,7 +218,11 @@ def gps(point:GpsIn,p:Participant=Depends(require_user),db:Session=Depends(get_d
     if recorded > utcnow()+timedelta(minutes=2) or recorded < utcnow()-timedelta(hours=48): raise HTTPException(422,"GPS времевият маркер е извън допустимия диапазон")
     aid=shift.asset_id
     ev_id=point.device_event_id or secrets.token_hex(16)
-    if db.query(GpsPoint).filter_by(device_event_id=ev_id).first(): return {"ok":True,"duplicate":True}
+    existing=db.query(GpsPoint).filter_by(device_event_id=ev_id).first()
+    if existing:
+        if existing.participant_id != p.id or existing.organization_id != p.organization_id:
+            raise HTTPException(409,"GPS идентификаторът вече е използван")
+        return {"ok":True,"duplicate":True}
     gp=GpsPoint(organization_id=p.organization_id,project_id=p.project_id,participant_id=p.id,asset_id=aid,shift_id=shift.id,latitude=point.latitude,longitude=point.longitude,accuracy_m=point.accuracy_m,speed_mps=point.speed_mps,heading_deg=point.heading_deg,recorded_at=recorded,device_event_id=ev_id)
     db.add(gp); db.commit(); return {"ok":True,"received_at":gp.received_at.isoformat()}
 
