@@ -25,6 +25,12 @@ def test_gps_idempotency_and_owner():
         assert collision.status_code==409
         assert d1.post('/api/gps',json={**point,'device_event_id':'x'*81}).status_code==422
         assert d1.post('/api/shift/end').status_code==200
+        # Retry of an already persisted event must still be acknowledged after shift end.
+        after_close=d1.post('/api/gps',json=point)
+        assert after_close.status_code==200 and after_close.json()['duplicate'] is True
+        # Reusing the ID with a different payload is a conflict, never an ACK.
+        collision_payload=d1.post('/api/gps',json={**point,'latitude':42.8})
+        assert collision_payload.status_code==409
         assert d1.post('/api/shift/start').status_code==200
         assert d1.post('/api/gps',json={**point,'device_event_id':'old-before-shift','recorded_at':'2026-01-01T00:00:00Z'}).status_code in (409,422)
         assert d1.post('/api/shift/end').status_code==200
