@@ -19,3 +19,10 @@ test('field map only appears for field roles',()=>{
  assert.match(field,/\['driver','operator'\]/);
  assert.match(field,/lastPosition/);
 });
+
+test('GPS UI has no legacy parallel queue or watch state',()=>{
+ const app=read('static/app.js');
+ for(const name of ['watchId','gpsTimer','lastGpsSentAt','gpsQueue'])assert.doesNotMatch(app,new RegExp('\\b'+name+'\\b'));
+ assert.match(app,/new GpsEngineV03\\(\\{store,api,geo:navigator\\.geolocation,actorId,deviceId,onUpdate:gpsMessage,onPosition:/);
+ assert.match(app,/new IndexedGpsStore\\(\\)/);
+});
