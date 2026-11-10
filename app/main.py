@@ -211,6 +211,19 @@ def shift_end(p:Participant=Depends(require_user),db:Session=Depends(get_db)):
 @app.post("/api/gps")
 def gps(point:GpsIn,p:Participant=Depends(require_user),db:Session=Depends(get_db)):
     if p.role not in ("driver","operator","site_manager","dispatcher"): raise HTTPException(403,"GPS не е разрешен за тази роля")
+    # A retry can arrive after its shift has ended or its timestamp has aged out.
+    # Acknowledge only the original participant's identical event before shift checks.
+    if point.device_event_id:
+        existing=db.query(GpsPoint).filter_by(device_event_id=point.device_event_id).first()
+        if existing:
+            if existing.participant_id != p.id or existing.organization_id != p.organization_id or existing.project_id != p.project_id:
+                raise HTTPException(409,"GPS идентификаторът вече е използван")
+            same=(existing.latitude==point.latitude and existing.longitude==point.longitude
+                  and existing.accuracy_m==point.accuracy_m and existing.speed_mps==point.speed_mps
+                  and existing.heading_deg==point.heading_deg
+                  and (point.recorded_at is None or dt_utc(existing.recorded_at)==dt_utc(point.recorded_at)))
+            if not same: raise HTTPException(409,"GPS идентификаторът е използван с различни данни")
+            return {"ok":True,"duplicate":True}
     shift=get_open_shift(db,p)
     recorded=dt_utc(point.recorded_at) if point.recorded_at else utcnow()
     # Resolve the shift using measurement time to avoid attaching offline points to a newer shift.
@@ -223,11 +236,6 @@ def gps(point:GpsIn,p:Participant=Depends(require_user),db:Session=Depends(get_d
     if recorded > utcnow()+timedelta(minutes=2) or recorded < utcnow()-timedelta(hours=48): raise HTTPException(422,"GPS времевият маркер е извън допустимия диапазон")
     aid=shift.asset_id
     ev_id=point.device_event_id or secrets.token_hex(16)
-    existing=db.query(GpsPoint).filter_by(device_event_id=ev_id).first()
-    if existing:
-        if existing.participant_id != p.id or existing.organization_id != p.organization_id:
-            raise HTTPException(409,"GPS идентификаторът вече е използван")
-        return {"ok":True,"duplicate":True}
     gp=GpsPoint(organization_id=p.organization_id,project_id=p.project_id,participant_id=p.id,asset_id=aid,shift_id=shift.id,latitude=point.latitude,longitude=point.longitude,accuracy_m=point.accuracy_m,speed_mps=point.speed_mps,heading_deg=point.heading_deg,recorded_at=recorded,device_event_id=ev_id)
     db.add(gp); db.commit(); return {"ok":True,"received_at":gp.received_at.isoformat()}
 
