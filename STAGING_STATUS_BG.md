@@ -36,3 +36,12 @@
 - Прочетени обратно от GitHub и проверени като текст: `static/app.js`, `templates/app.html`, `static/field-command.js`, `static/field-command.css`, `static/gps-v03.mjs`.
 - **Все още липсва** `static/gps-reliability.mjs` от локалния архив; v0.3 GPS двигателят не го импортира пряко, но пълна байтова синхронизация с v0.3.4 не е постигната.
 - **Няма потвърден зелен GitHub Actions run за крайния commit**. Не са проведени браузърни, Android или PostgreSQL тестове. Следователно staging НЕ е готов за Render.
+
+## Инженерен одит — 10.11.2026
+
+- Коригирана миграция на legacy GPS queue в `static/app.js`: при невалиден запис оригиналната опашка се запазва, вместо да се изтрива (commit `a01e58efd748c45b4862a94d841b724ef5795eb0`).
+- Коригирана `tests/test_pilot_flow.py`, така че да не подменя изолирания `DATABASE_URL` (commit `e3168adc97f80c0b1ae2908e7c7cb20013642300`).
+- Изпълнени тестове на **локалния архив**, а не на крайния GitHub commit: 34/34 JS, локални Python API тестове успешни.
+- GitHub API за workflow runs по commit `e3168adc97f80c0b1ae2908e7c7cb20013642300` върна празен списък. Това API филтрира само pull-request-triggered runs и **не доказва**, че push workflow не е стартирал.
+- Няма мрежов достъп от работния контейнер до github.com за clone, затова **не може да се потвърди изпълнение на пълния staging tree** в този контейнер.
+- Няма разрешение да се декларира 100% готовност без staging интеграционни и реални Android проверки. Production не е променяна.
