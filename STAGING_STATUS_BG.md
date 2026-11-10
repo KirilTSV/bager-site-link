@@ -45,3 +45,18 @@
 - GitHub API за workflow runs по commit `e3168adc97f80c0b1ae2908e7c7cb20013642300` върна празен списък. Това API филтрира само pull-request-triggered runs и **не доказва**, че push workflow не е стартирал.
 - Няма мрежов достъп от работния контейнер до github.com за clone, затова **не може да се потвърди изпълнение на пълния staging tree** в този контейнер.
 - Няма разрешение да се декларира 100% готовност без staging интеграционни и реални Android проверки. Production не е променяна.
+
+## Инженерна верификация — 10.11.2026 (текуща сесия)
+
+**Локален архив:** `BAGER_SITE_LINK_V034_GPS_INTEGRITY.zip` (извлечен в изолирана работна директория). Реално изпълнени команди:
+
+- `node --test tests/*.test.mjs tests/gps/*.test.mjs` → **34/34 passed**.
+- `python tests/run_isolated.py` → **2 + 1 + 1 = 4 passed** в отделни SQLite тестови бази.
+- SHA-256 на локалния архив: `static/gps-v03.mjs` = `34bc1206bb692554bcb5a6f29aab23fee4eded6d51cdb3b4f52b31dc3872ee23`; `static/gps-reliability.mjs` = `0b220f187d89134c2cd48b7f05abd74146dc989c5c5e13f228c36371ad7db729`.
+
+**Извършени нови промени в staging:**
+
+- GitHub Actions проверява синтаксиса на `app.js`, `field-command.js`, `gps-v03.mjs`, `sw.js` чрез `node --check` (commit `14f72a1e3b0e2234570554f1f390000ffa855b97`).
+- Legacy GPS миграцията открива повтарящи се event ID, за да избегне тихо презаписване на точки (commit `0814ccdda9882fadfaca913424f73c0d17a2c581`).
+
+**Строги ограничения:** тестовете са върху локалния архив, **не върху текущия GitHub commit**. В staging още няма доказано успешен GitHub Actions run, няма потвърдена реална PostgreSQL интеграция, няма браузърен и Android полеви тест. Няма нов Render deployment и няма промени в `main`. До доказване на тези условия не се декларира release-ready статус.
