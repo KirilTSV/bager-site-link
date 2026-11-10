@@ -259,17 +259,37 @@ def trips(p:Participant=Depends(require_user),db:Session=Depends(get_db)):
         result.append({"id":t.id,"trip_number":t.trip_number,"truck":a.code if a else "?","status":t.status,"volume_m3":ticket.volume_m3 if ticket else None,"created_at":t.created_at.isoformat()})
     return result
 
-@app.post("/api/trips/new")
-def new_trip(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
-    trucks=db.query(Asset).filter_by(project_id=p.project_id,asset_type="dump_truck").all()
-    active_ids=[t.truck_asset_id for t in db.query(Trip).filter(Trip.project_id==p.project_id,Trip.status.notin_(["completed","cancelled"])).all()]
+class NewTripIn(BaseModel):
+    truck_asset_id: str | None = None
+
+@app.get("/api/trips/assignments")
+def trip_assignments(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
+    trucks=db.query(Asset).filter_by(project_id=p.project_id,asset_type="dump_truck").order_by(Asset.code).all()
+    active_ids={t.truck_asset_id for t in db.query(Trip).filter_by(project_id=p.project_id).filter(Trip.status.notin_(["completed","cancelled"])).all()}
     drivers=db.query(Participant).filter_by(project_id=p.project_id,role="driver",status="active").all()
-    assignment=next(((x,next((d for d in drivers if d.asset_id==x.id),None)) for x in trucks if x.id not in active_ids and any(d.asset_id==x.id for d in drivers)),None)
+    return [{"truck_asset_id":a.id,"truck":a.code,"driver":next((d.display_name for d in drivers if d.asset_id==a.id),None),
+             "available":a.id not in active_ids and any(d.asset_id==a.id for d in drivers),
+             "reason":"Активен курс" if a.id in active_ids else ("Няма назначен шофьор" if not any(d.asset_id==a.id for d in drivers) else None)} for a in trucks]
+
+@app.post("/api/trips/new")
+def new_trip(data:NewTripIn | None=None,p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
+    trucks=db.query(Asset).filter_by(project_id=p.project_id,asset_type="dump_truck").order_by(Asset.code).all()
+    if data and data.truck_asset_id:
+        trucks=[a for a in trucks if a.id==data.truck_asset_id]
+        if not trucks: raise HTTPException(404,"Камионът не е намерен в този обект")
+    active_ids={t.truck_asset_id for t in db.query(Trip).filter_by(project_id=p.project_id).filter(Trip.status.notin_(["completed","cancelled"])).all()}
+    drivers=db.query(Participant).filter_by(project_id=p.project_id,role="driver",status="active").all()
+    assignment=next(((a,d) for a in trucks if a.id not in active_ids for d in drivers if d.asset_id==a.id),None)
     if not assignment: raise HTTPException(409,"Няма свободна комбинация камион + назначен шофьор")
     truck,driver=assignment
     last=db.query(func.max(Trip.trip_number)).filter_by(project_id=p.project_id).scalar() or 0
     t=Trip(id=str(uuid.uuid4()),organization_id=p.organization_id,project_id=p.project_id,truck_asset_id=truck.id,driver_participant_id=driver.id,trip_number=last+1,status="queued",queued_at=utcnow())
-    db.add(t); event(db,p.organization_id,p.project_id,p.id,"trip.created","trip",t.id,{"truck":truck.code,"driver":driver.display_name}); db.commit(); return {"ok":True,"trip_id":t.id,"truck":truck.code,"driver":driver.display_name}
+    db.add(t); event(db,p.organization_id,p.project_id,p.id,"trip.created","trip",t.id,{"truck":truck.code,"driver":driver.display_name})
+    try: db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(409,"Конфликт при създаване на курс. Обновете данните и опитайте отново.")
+    return {"ok":True,"trip_id":t.id,"truck":truck.code,"driver":driver.display_name}
 
 @app.post("/api/trips/{trip_id}/action")
 def trip_action(trip_id:str,action:TripAction,p:Participant=Depends(require_user),db:Session=Depends(get_db)):
