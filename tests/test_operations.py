@@ -28,3 +28,16 @@ def test_operations_empty_fleet_and_role_guard():
             assert truck["completed_trips"]==0
             assert truck["status"]=="no_driver"
         assert data["excavators"][0]["indicative_loading_m3_per_hour"] is None
+
+def test_explicit_dispatch_requires_assigned_driver():
+    with TestClient(app) as client:
+        assert client.post("/login",data={"password":"test-only-password-2026"},follow_redirects=False).status_code==303
+        options=client.get("/api/trips/assignments")
+        assert options.status_code==200
+        rows=options.json()
+        assert len(rows)==2
+        assert all(not row["available"] and row["reason"]=="Няма назначен шофьор" for row in rows)
+        selected=client.post("/api/trips/new",json={"truck_asset_id":rows[0]["truck_asset_id"]})
+        assert selected.status_code==409
+        foreign=client.post("/api/trips/new",json={"truck_asset_id":"not-in-project"})
+        assert foreign.status_code==404
