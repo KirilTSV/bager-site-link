@@ -24,3 +24,14 @@ test('UI position callback failure cannot discard valid durable GPS fix',async()
  assert.equal(store.m.size,1);
  assert.equal(e.state,'pending_sync');
 });
+
+test('status callback exceptions cannot interrupt durable capture and acknowledged sync',async()=>{
+ const store=new Store();let calls=0;
+ const e=new GpsEngineV03({store,api:async()=>{calls++;return {ok:true}},actorId:'user',deviceId:'phone',now:()=>time,onUpdate:()=>{throw Error('broken status UI')}});
+ e.running=true;
+ assert.equal(await e.accept(pos()),true);
+ await e.flush();
+ assert.equal(calls,1);
+ assert.equal(store.m.size,0);
+ assert.equal(e.state,'confirmed');
+});
