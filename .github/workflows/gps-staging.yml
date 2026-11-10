@@ -29,6 +29,6 @@ jobs:
           node --check static/gps-v03.mjs
           node --check static/sw.js
       - name: JavaScript GPS regression tests
-        run: node --test tests/gps-event-id.test.mjs tests/gps-hardening.test.mjs tests/gps-wiring.test.mjs
+        run: node --test tests/*.test.mjs tests/gps/*.test.mjs
       - name: Isolated API regression tests
         run: python tests/run_isolated.py
