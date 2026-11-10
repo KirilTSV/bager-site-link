@@ -38,7 +38,9 @@ export class GpsEngineV03 {
     if(!this.running)return false;
     const c=pos?.coords,t=Number(pos?.timestamp),now=this.now();
     if(!c||![c.latitude,c.longitude,c.accuracy,t].every(Number.isFinite)||Math.abs(c.latitude)>90||Math.abs(c.longitude)>180||c.accuracy<0||c.accuracy>10000||t>now+120000||t<now-48*3600000){this.emit('invalid_fix');return false;}
-    this.onPosition({latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy,timestamp:t});
+    // A UI observer must never prevent a valid GPS fix from reaching durable storage.
+    try{this.onPosition({latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy,timestamp:t});}
+    catch(e){console.warn('GPS position observer failed',e);}
     if(t-this.lastRecorded<this.interval)return true;
     try{
       if(await this.count()>=this.maxPending){this.emit('queue_full');return false;}
