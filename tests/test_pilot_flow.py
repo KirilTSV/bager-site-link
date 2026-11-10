@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault('BAGER_ADMIN_PASSWORD','test-only-password-2026')
 _test_db_dir = tempfile.mkdtemp(prefix='bager_site_link_test_')
-os.environ['DATABASE_URL'] = 'sqlite:///' + str(Path(_test_db_dir) / 'pilot.db')
+os.environ.setdefault('DATABASE_URL', 'sqlite:///' + str(Path(_test_db_dir) / 'pilot.db'))
 os.environ.setdefault('COOKIE_SECURE','0')
 from fastapi.testclient import TestClient
 from app.main import app
