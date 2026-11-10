@@ -1,0 +1,13 @@
+/* BAGER Field Command — isolated styles; no changes to dispatcher UI */
+.fc-card{margin:16px 0;padding:16px;border:1px solid #2d6652;border-radius:14px;background:#12251e;color:#f0fff6}
+.fc-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.fc-card-title{margin:0 0 4px;font-size:1.05rem}
+.fc-caption{font-size:.8rem;color:#b7d7c6}
+.fc-status{display:inline-block;border-radius:20px;padding:5px 10px;background:#314039;color:#fff;font-size:.75rem;white-space:nowrap}
+.fc-status.good{background:#195c3e}.fc-status.warn{background:#79522b}
+#fcMap{width:100%;height:280px;min-height:220px;margin:12px 0;border-radius:10px;background:#223b30;overflow:hidden}
+.fc-tools{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.fc-tools button{cursor:pointer}
+.fc-readout{font-size:.9rem;line-height:1.5;overflow-wrap:anywhere}
+.fc-alert{margin-top:12px;color:#e9c88a;font-size:.82rem;line-height:1.4}
+@media(max-width:480px){.fc-card{padding:12px}#fcMap{height:240px}.fc-card-header{flex-wrap:wrap}}
