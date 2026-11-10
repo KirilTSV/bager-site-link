@@ -22,6 +22,12 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install pytest
+      - name: Parse all deployed JavaScript files
+        run: |
+          node --check static/app.js
+          node --check static/field-command.js
+          node --check static/gps-v03.mjs
+          node --check static/sw.js
       - name: JavaScript GPS regression tests
         run: node --test tests/gps-event-id.test.mjs tests/gps-hardening.test.mjs tests/gps-wiring.test.mjs
       - name: Isolated API regression tests
