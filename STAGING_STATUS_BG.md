@@ -1,22 +1,22 @@
-# BAGER SITE LINK — staging GPS v0.3.4
+# BAGER SITE LINK — staging GPS validation
 
-## Реално изпълнено
+## Доказани GitHub действия
+- Отделен клон `staging/gps-v034-validation`, без промени в `main`.
+- Сървърна GPS защита в `app/main.py`: ограничение на event ID, проверка за собственост, отнасяне на закъснели точки по времето на смяната.
+- Добавен автентикиран `GET /api/shift/status` (commit `360fee18bca3d42ff45343ccfcbfa5076cddce2c`).
+- Качен `static/gps-v03.mjs` (commit `cd431f05f210683b660c134a6e4d2eb18155e91a`).
+- Качени регресионни тестове `tests/gps-event-id.test.mjs`, `tests/gps-hardening.test.mjs`, `tests/test_gps_integrity.py`, `tests/test_shift_status.py` и изолиран тестов стартер `tests/run_isolated.py`.
+- Създаден GitHub Actions workflow `.github/workflows/gps-staging.yml` (commit `98425c2cff7fc4af25839050f8f8b095974a4e68`).
 
-- Изолиран GitHub клон `staging/gps-v034-validation`.
-- Качен GPS модул `static/gps-v03.mjs` (commit `cd431f05f210683b660c134a6e4d2eb18155e91a`); не е изпълнен CI тест върху staging commit.
-- Сървърно GPS hardening в `app/main.py`, commit `67f4b5c75f1e2fbd40a76a931d9e08e2bdf3cd6b`: ограничение на `device_event_id`, защита от чужд идентификатор и правилно съотнасяне на офлайн точки към смяна.
-- Локалният архив v0.3.4 премина 34 JavaScript и 4 Python API теста; това НЕ е проверка на GitHub клона.
+## Проверки и ограничения
+- На локалния пакет v0.3.4: 34/34 JavaScript теста преминаха; Python изолираните тестове преминаха (отделни процеси и бази).
+- **Не е потвърдено**, че GitHub Actions workflow е стартирал или преминал на конкретния staging commit.
+- Клиентският код от v0.3.4 **не е напълно синхронизиран**. Остават `static/gps-reliability.mjs`, `static/field-command.js`, `static/field-command.css`, съответните актуализации на `static/app.js` и `templates/app.html` и пълният комплект JS тестове.
+- Поради това staging клонът **не е готов за Render deployment**.
+- Не е проверяван реален PostgreSQL или Android GPS.
 
-## Оставащи липсващи в GitHub клона файлове от v0.3.4
-
-- `static/gps-reliability.mjs`
-- `static/field-command.js`
-- `static/field-command.css`
-- `tests/test_gps_integrity.py`
-
-Клиентските `static/app.js` и `templates/app.html` също още не са синхронизирани с пакета v0.3.4. Следователно staging клонът НЕ е пълен release кандидат и не бива да се внедрява.
-
-## Правила
-
-- Не променяйте `main` или продукционната база.
-- Преди Render staging: синхронизирайте всички файлове, изпълнете тестове върху същия commit, осигурете отделна база и проверете настройките за секрети.
+## Задължителен следващ gate
+1. Синхронизиране на оставащите файлове от v0.3.4.
+2. Сравнение на staging commit с архивния кандидат.
+3. Положителен GitHub Actions резултат за същия commit.
+4. Едва след това отделна Render база и услуга, без достъп до production DB.
