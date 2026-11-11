@@ -271,6 +271,24 @@ def trip_action(trip_id:str,action:TripAction,p:Participant=Depends(require_user
     status,field=transitions[action.action]
     allowed={"queued":["queue","loading_start"],"loading":["loaded"],"loaded":["depart"],"outbound":["arrived_disposal"],"at_disposal":["unloaded"],"returning":["returned"]}
     if action.action not in allowed.get(t.status,[]): raise HTTPException(409,f"Невалиден преход: {t.status} → {status}")
+    if action.action=="unloaded":
+        from .operations import TripDestination
+        from math import radians, sin, cos, atan2, sqrt
+        dest=db.get(TripDestination,t.id)
+        if not dest: raise HTTPException(409,"Липсва разтоварище за курса")
+        point=db.query(GpsPoint).filter_by(project_id=p.project_id,asset_id=t.truck_asset_id,participant_id=t.driver_participant_id).order_by(desc(GpsPoint.recorded_at)).first()
+        age=(utcnow()-dt_utc(point.recorded_at)).total_seconds() if point else None
+        if point and age is not None and -120 <= age <= 300 and (point.accuracy_m is not None and point.accuracy_m <= 100):
+            dest.unload_latitude=point.latitude; dest.unload_longitude=point.longitude
+            dest.unload_gps_recorded_at=point.recorded_at
+            lat1,lon1,lat2,lon2=map(radians,[dest.latitude,dest.longitude,point.latitude,point.longitude])
+            dlat=lat2-lat1; dlon=lon2-lon1
+            a=sin(dlat/2)**2+cos(lat1)*cos(lat2)*sin(dlon/2)**2
+            dest.unload_distance_m=round(6371000*2*atan2(sqrt(a),sqrt(1-a)),1)
+            dest.unload_verification="near_site_review" if dest.unload_distance_m <= 250 else "location_mismatch"
+        else:
+            dest.unload_verification="gps_unavailable"
+        event(db,p.organization_id,p.project_id,p.id,"trip.unload_evidence","trip",t.id,{"verification":dest.unload_verification,"distance_m":dest.unload_distance_m,"gps_recorded_at":dest.unload_gps_recorded_at.isoformat() if dest.unload_gps_recorded_at else None})
     if field: setattr(t,field,utcnow())
     t.status=status
     event(db,p.organization_id,p.project_id,p.id,"trip."+action.action,"trip",t.id,{"new_status":status}); db.commit(); return {"ok":True,"status":status}
