@@ -20,7 +20,7 @@ jobs:
         env:
           DATABASE_URL: sqlite:///${{ runner.temp }}/marketplace_test.sqlite3
           BAGER_ADMIN_PASSWORD: ci-test-only
-        run: python -m pytest -q tests/test_marketplace.py tests/test_operations.py
+        run: python -m pytest -q tests/test_marketplace.py tests/test_operations.py tests/test_branding.py
   postgres-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -49,4 +49,4 @@ jobs:
           DATABASE_URL: postgresql+psycopg://bager_test:ci-only-postgres-password@localhost:5432/bager_marketplace_test
           BAGER_ADMIN_PASSWORD: ci-test-only
           COOKIE_SECURE: '0'
-        run: python -m pytest -q tests/test_marketplace.py
+        run: python -m pytest -q tests/test_marketplace.py tests/test_branding.py
