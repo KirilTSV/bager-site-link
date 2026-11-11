@@ -6,13 +6,15 @@ from fastapi.testclient import TestClient
 from app.asgi import app
 from app.db import SessionLocal
 from app.models import Asset, Participant, Trip
-from app.operations import TripDestination
+from app.operations import TripDestination, DailyAssignment
 
 
 def test_trip_requires_daily_assignment_and_preserves_destination():
     with TestClient(app) as client:
         assert client.post("/login",data={"password":"ci-test-only"},follow_redirects=False).status_code==303
         with SessionLocal() as db:
+            db.query(DailyAssignment).delete()
+            db.commit()
             truck=db.query(Asset).filter_by(asset_type="dump_truck").order_by(Asset.code.desc()).first()
             driver=Participant(id=str(uuid.uuid4()),organization_id=truck.organization_id,project_id=truck.project_id,display_name="Trip test driver",role="driver",asset_id=truck.id)
             db.add(driver); db.commit()
