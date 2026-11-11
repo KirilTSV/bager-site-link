@@ -41,6 +41,25 @@ class DailyAssignment(Base):
     created_by: Mapped[str] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
+class TripDestination(Base):
+    """Immutable assigned-site snapshot per trip; no edits to historical trips."""
+    __tablename__ = "site_link_trip_destinations"
+    trip_id: Mapped[str] = mapped_column(ForeignKey("site_link_trips.id"), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(String(36), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), index=True)
+    assignment_id: Mapped[str] = mapped_column(ForeignKey("site_link_daily_assignments.id"))
+    disposal_site_id: Mapped[str] = mapped_column(String(36))
+    site_name: Mapped[str] = mapped_column(String(160))
+    site_address: Mapped[str] = mapped_column(String(300))
+    latitude: Mapped[float] = mapped_column(Float)
+    longitude: Mapped[float] = mapped_column(Float)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    unload_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    unload_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    unload_gps_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    unload_distance_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    unload_verification: Mapped[str] = mapped_column(String(32), default="not_recorded")
+
 class SiteIn(BaseModel):
     name: str = Field(min_length=2, max_length=160)
     address: str = Field(min_length=3, max_length=300)
