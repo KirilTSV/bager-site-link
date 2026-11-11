@@ -1,6 +1,6 @@
 """Marketplace MVP acceptance checks (isolated DB fixture is configured by tests/run_isolated.py)."""
 from fastapi.testclient import TestClient
-from app.main import app
+from app.asgi import app
 
 def test_marketplace_public_page_and_validation():
     with TestClient(app) as client:
