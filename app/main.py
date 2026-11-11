@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, text
 from pydantic import BaseModel, Field
 from .db import Base, engine, get_db
+from .marketplace import router as marketplace_router
 from .models import Organization, Project, Participant, Asset, Shift, Invitation, WebSession, GpsPoint, Trip, LoadTicket, Quantity, Event, utcnow
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,6 +30,7 @@ async def lifespan(application):
     yield
 
 app = FastAPI(title="BAGER SITE LINK v1.0", version="1.0.0", lifespan=lifespan)
+app.include_router(marketplace_router)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
