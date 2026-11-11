@@ -22,3 +22,18 @@ def test_marketplace_public_intake_and_private_admin():
         assert partner.json()["status"]=="pending_verification"
         assert client.get("/api/market/admin").status_code==401
         assert client.post("/api/market/offers",json={"request_id":inquiry.json()["id"],"partner_id":partner.json()["id"],"price_bgn":5000}).status_code==401
+
+def test_marketplace_authenticated_admin_can_create_offer():
+    with TestClient(app) as client:
+        inquiry=client.post("/api/market/requests",json={"contact_name":"Тест Клиент","contact_phone":"0888000000","site_area":"София Лозенец","description":"Изкоп с извозване на земни маси","service":"combined","consent":True})
+        assert inquiry.status_code==201, inquiry.text
+        partner=client.post("/api/market/partners",json={"company_name":"Тест Изпълнител","contact_phone":"0888111111","services":"Багери и камиони","service_area":"София","consent":True})
+        assert partner.status_code==201, partner.text
+        login=client.post("/login",data={"password":"ci-test-only"},follow_redirects=False)
+        assert login.status_code==303, login.text
+        admin=client.get("/api/market/admin")
+        assert admin.status_code==200, admin.text
+        assert any(row["id"]==inquiry.json()["id"] for row in admin.json()["requests"])
+        offer=client.post("/api/market/offers",json={"request_id":inquiry.json()["id"],"partner_id":partner.json()["id"],"price_bgn":5000})
+        assert offer.status_code==201, offer.text
+        assert any(row["id"]==offer.json()["id"] for row in client.get("/api/market/admin").json()["offers"])
