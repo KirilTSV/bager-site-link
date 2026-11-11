@@ -231,25 +231,34 @@ def gps_latest(p:Participant=Depends(require_roles("owner","dispatcher","site_ma
 
 @app.get("/api/trips")
 def trips(p:Participant=Depends(require_user),db:Session=Depends(get_db)):
+    from .operations import TripDestination
     q=db.query(Trip).filter_by(project_id=p.project_id)
     if p.role=="driver": q=q.filter_by(driver_participant_id=p.id)
     rows=q.order_by(desc(Trip.created_at)).limit(100).all(); result=[]
     for t in rows:
         a=db.get(Asset,t.truck_asset_id); ticket=db.query(LoadTicket).filter_by(trip_id=t.id).first()
-        result.append({"id":t.id,"trip_number":t.trip_number,"truck":a.code if a else "?","status":t.status,"volume_m3":ticket.volume_m3 if ticket else None,"created_at":t.created_at.isoformat()})
+        dest=db.get(TripDestination,t.id)
+        result.append({"disposal_site": {"id":dest.disposal_site_id,"name":dest.site_name,"address":dest.site_address} if dest else None,"unload_verification":dest.unload_verification if dest else None,"unload_distance_m":dest.unload_distance_m if dest else None,"id":t.id,"trip_number":t.trip_number,"truck":a.code if a else "?","status":t.status,"volume_m3":ticket.volume_m3 if ticket else None,"created_at":t.created_at.isoformat()})
     return result
 
 @app.post("/api/trips/new")
 def new_trip(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
+    from .operations import DailyAssignment, DisposalSite, TripDestination
+    from zoneinfo import ZoneInfo
+    work_date=utcnow().astimezone(ZoneInfo("Europe/Sofia")).date()
     trucks=db.query(Asset).filter_by(project_id=p.project_id,asset_type="dump_truck").all()
     active_ids=[t.truck_asset_id for t in db.query(Trip).filter(Trip.project_id==p.project_id,Trip.status.notin_(["completed","cancelled"])).all()]
     drivers=db.query(Participant).filter_by(project_id=p.project_id,role="driver",status="active").all()
-    assignment=next(((x,next((d for d in drivers if d.asset_id==x.id),None)) for x in trucks if x.id not in active_ids and any(d.asset_id==x.id for d in drivers)),None)
+    daily=db.query(DailyAssignment).filter_by(project_id=p.project_id,work_date=work_date).all()
+    assignment=next(((truck,driver,day) for day in daily for truck in trucks for driver in drivers if day.truck_asset_id==truck.id and day.driver_participant_id==driver.id and driver.asset_id==truck.id and truck.id not in active_ids and db.query(DisposalSite).filter_by(id=day.disposal_site_id,project_id=p.project_id,status="approved").first()),None)
     if not assignment: raise HTTPException(409,"Няма свободна комбинация камион + назначен шофьор")
-    truck,driver=assignment
+    truck,driver,day=assignment
+    site=db.get(DisposalSite,day.disposal_site_id)
     last=db.query(func.max(Trip.trip_number)).filter_by(project_id=p.project_id).scalar() or 0
     t=Trip(id=str(uuid.uuid4()),organization_id=p.organization_id,project_id=p.project_id,truck_asset_id=truck.id,driver_participant_id=driver.id,trip_number=last+1,status="queued",queued_at=utcnow())
-    db.add(t); event(db,p.organization_id,p.project_id,p.id,"trip.created","trip",t.id,{"truck":truck.code,"driver":driver.display_name}); db.commit(); return {"ok":True,"trip_id":t.id,"truck":truck.code,"driver":driver.display_name}
+    db.add(t)
+    db.add(TripDestination(trip_id=t.id,organization_id=p.organization_id,project_id=p.project_id,assignment_id=day.id,disposal_site_id=site.id,site_name=site.name,site_address=site.address,latitude=site.latitude,longitude=site.longitude))
+    event(db,p.organization_id,p.project_id,p.id,"trip.created","trip",t.id,{"truck":truck.code,"driver":driver.display_name,"disposal_site_id":site.id}); db.commit(); return {"ok":True,"trip_id":t.id,"truck":truck.code,"driver":driver.display_name,"disposal_site":{"id":site.id,"name":site.name}}
 
 @app.post("/api/trips/{trip_id}/action")
 def trip_action(trip_id:str,action:TripAction,p:Participant=Depends(require_user),db:Session=Depends(get_db)):
