@@ -8,7 +8,7 @@ def test_brand_logo_is_served_and_present_for_all_roles():
         asset = client.get("/static/bager-site-link-logo.jpg")
         assert asset.status_code == 200
         assert asset.headers["content-type"].startswith("image/jpeg")
-        assert asset.content[:3] == b"\\xff\\xd8\\xff"
+        assert asset.content[:3] == bytes([255, 216, 255])
         login = client.get("/")
         assert login.status_code == 200
         assert '/static/bager-site-link-logo.jpg' in login.text
