@@ -26,5 +26,5 @@ def test_brand_logo_is_served_and_present_for_all_roles():
         assert 'id="equipmentList"' in home.text
         assert 'id="assignmentForm"' in home.text
         assert 'class="main-nav"' in home.text
-        assert 'BAGER <span class="brand-accent">SITE LINK</span>' in home.text
+        assert 'BAGER SITE <span class="brand-accent">LINK</span>' in home.text
         assert '/static/bager-site-link-logo.jpg' in home.text
