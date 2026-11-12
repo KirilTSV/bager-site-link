@@ -35,3 +35,22 @@ body{background:radial-gradient(ellipse at 50% -10%,#16304a 0%,#071320 50%,#0610
 body:not([data-role="dispatcher"]):not([data-role="owner"]) [data-role-nav="dispatcher"]{display:none}
 
 .trip-destination{margin-top:10px;padding:10px 12px;background:#102e38;border:1px solid #2e5962;border-radius:9px;color:#cde4e7;font-size:12px}.trip-destination strong{color:#fff}.trip-destination small{display:block;margin-top:4px}.trip-destination.warning{background:#36281b;border-color:#795b34;color:#f9d7a3}
+
+/* Dashboard fidelity and accessibility fixes */
+.topbar{max-width:none;padding-inline:max(18px,calc((100vw - 1180px)/2));}
+.brand-logo.small{object-fit:contain;background:#fff;border-radius:16px;border:2px solid #f6b91d;}
+.brand b{font-style:italic;font-weight:900;letter-spacing:.035em;text-shadow:0 2px 2px #0005;}
+.brand-accent{background:linear-gradient(110deg,#ffb91d,#ffe28a);background-clip:text;-webkit-background-clip:text;color:transparent;}
+.main-nav{max-width:none;padding-inline:max(18px,calc((100vw - 1180px)/2));}
+.project-head{background:linear-gradient(100deg,#0b2035 0%,#122c42 68%,#173046 100%);border-color:#334b61;box-shadow:inset 0 0 0 1px #ffffff08,0 12px 35px #0003;}
+.project-head .hero-overlay{opacity:.28;background:radial-gradient(ellipse at 86% 75%,#dca52c44,transparent 50%),repeating-linear-gradient(155deg,transparent 0 26px,#f6c13c0b 27px 28px);}
+.project-head h1{font-weight:850;line-height:1.16;letter-spacing:-.025em;}
+.section-head{margin-top:30px;}
+.kpi{box-shadow:inset 0 1px 0 #ffffff0b,0 6px 20px #0002;}
+.kpi strong{font-weight:850;letter-spacing:-.04em;}
+.panel{box-shadow:inset 0 1px 0 #ffffff09,0 8px 25px #0002;}
+.equipment-panel{scroll-margin-top:100px;}
+#equipmentList{margin-top:16px;}
+@media(min-width:900px){.kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));}.two-col{display:grid;grid-template-columns:1.1fr .9fr;}}
+@media(max-width:760px){.topbar{padding-inline:16px;}.main-nav{padding-inline:10px;}.brand-logo.small{width:62px;height:62px;flex-shrink:0}.brand b{font-size:clamp(15px,3.5vw,20px)}.brand small{font-size:10px}.project-head h1{font-size:clamp(26px,6.2vw,35px)}.project-head{min-height:230px}.project-head .live-pill{margin-top:16px}}
+@media(max-width:420px){.brand-logo.small{width:55px;height:55px}.brand b{font-size:14px}.project-head{min-height:220px}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.kpi{min-height:128px}}
