@@ -18,6 +18,9 @@ def test_brand_logo_is_served_and_present_for_all_roles():
         assert '<header class="topbar">' in home.text
         assert 'class="brand-logo small"' in home.text
         assert 'id="operationsPanel"' in home.text
+        assert 'class="dashboard-workspace"' in home.text
+        assert 'class="workspace-left"' in home.text
+        assert 'class="workspace-right"' in home.text
         assert 'id="equipmentPanel"' in home.text
         assert 'id="driverAssignment"' in home.text
         assert 'id="equipmentList"' in home.text
