@@ -41,6 +41,19 @@ class DailyAssignment(Base):
     created_by: Mapped[str] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
+class AssignmentChange(Base):
+    """Append-only audit for a supervisor-approved change to today's assigned site."""
+    __tablename__ = "site_link_assignment_changes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(String(36), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), index=True)
+    assignment_id: Mapped[str] = mapped_column(ForeignKey("site_link_daily_assignments.id"), index=True)
+    previous_site_id: Mapped[str] = mapped_column(String(36))
+    new_site_id: Mapped[str] = mapped_column(String(36))
+    reason: Mapped[str] = mapped_column(String(500))
+    changed_by: Mapped[str] = mapped_column(String(36))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
 class TripDestination(Base):
     """Immutable assigned-site snapshot per trip; no edits to historical trips."""
     __tablename__ = "site_link_trip_destinations"
@@ -71,6 +84,10 @@ class AssignmentIn(BaseModel):
     truck_asset_id: str
     driver_participant_id: str
     disposal_site_id: str
+
+class AssignmentChangeIn(BaseModel):
+    new_disposal_site_id: str
+    reason: str = Field(min_length=10, max_length=500)
 
 def actor(request: Request, db: Session):
     from .main import current_participant
@@ -153,3 +170,44 @@ def list_assignments(request: Request, work_date: date, db: Session = Depends(ge
                        "driver_participant_id": a.driver_participant_id,
                        "disposal_site": site_json(site)})
     return result
+
+
+@router.post("/daily-assignments/{assignment_id}/change-site")
+def change_assignment_site(assignment_id: str, data: AssignmentChangeIn,
+                           request: Request, db: Session = Depends(get_db)):
+    p = actor(request, db)
+    supervisor(p)
+    assignment = db.query(DailyAssignment).filter_by(id=assignment_id, project_id=p.project_id).first()
+    if not assignment:
+        raise HTTPException(404, "Заданието не е намерено")
+    if assignment.work_date != datetime.now(timezone.utc).astimezone(__import__("zoneinfo").ZoneInfo("Europe/Sofia")).date():
+        raise HTTPException(409, "Може да се променя само заданието за днес")
+    site = db.query(DisposalSite).filter_by(id=data.new_disposal_site_id, project_id=p.project_id, status="approved").first()
+    if not site:
+        raise HTTPException(400, "Новото разтоварище трябва да е одобрено и за този обект")
+    if site.id == assignment.disposal_site_id:
+        raise HTTPException(409, "Новото разтоварище съвпада с текущото")
+    change = AssignmentChange(id=str(uuid.uuid4()), organization_id=p.organization_id,
+                              project_id=p.project_id, assignment_id=assignment.id,
+                              previous_site_id=assignment.disposal_site_id, new_site_id=site.id,
+                              reason=data.reason.strip(), changed_by=p.id)
+    assignment.disposal_site_id = site.id
+    db.add(change)
+    db.commit()
+    return {"id": assignment.id, "disposal_site": site_json(site),
+            "change_id": change.id, "reason": change.reason}
+
+@router.get("/daily-assignments/{assignment_id}/history")
+def assignment_history(assignment_id: str, request: Request, db: Session = Depends(get_db)):
+    p = actor(request, db)
+    assignment = db.query(DailyAssignment).filter_by(id=assignment_id, project_id=p.project_id).first()
+    if not assignment:
+        raise HTTPException(404, "Заданието не е намерено")
+    if p.role == "driver" and assignment.driver_participant_id != p.id:
+        raise HTTPException(403, "Нямате достъп до това задание")
+    if p.role not in ("owner", "dispatcher", "site_manager", "driver"):
+        raise HTTPException(403, "Нямате права")
+    changes = db.query(AssignmentChange).filter_by(assignment_id=assignment.id, project_id=p.project_id).order_by(AssignmentChange.changed_at.asc()).all()
+    return [{"id": c.id, "previous_site_id": c.previous_site_id,
+             "new_site_id": c.new_site_id, "reason": c.reason,
+             "changed_by": c.changed_by, "changed_at": c.changed_at.isoformat()} for c in changes]
