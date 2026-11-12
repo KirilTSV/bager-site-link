@@ -13,7 +13,9 @@ class TripWorkflowTest(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         os.environ["DATABASE_URL"] = "sqlite:///" + str(Path(cls.temp.name) / "test.db")
         os.environ["BAGER_ADMIN_PASSWORD"] = "test-only-not-production"
-        from app.main import app
+        from app import main
+        main.ADMIN_PASSWORD = "test-only-not-production"
+        app = main.app
         cls.client = TestClient(app)
         cls.client.__enter__()
 
