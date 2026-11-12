@@ -5,13 +5,13 @@ from app.asgi import app
 
 def test_brand_logo_is_served_and_present_for_all_roles():
     with TestClient(app) as client:
-        asset = client.get("/static/bager-site-link-logo.svg")
+        asset = client.get("/static/bager-site-link-logo.jpg")
         assert asset.status_code == 200
-        assert asset.text.startswith("<svg ")
-        assert "data:image/jpeg;base64," in asset.text
+        assert asset.headers["content-type"].startswith("image/jpeg")
+        assert asset.content[:3] == b"\\xff\\xd8\\xff"
         login = client.get("/")
         assert login.status_code == 200
-        assert '/static/bager-site-link-logo.svg' in login.text
+        assert '/static/bager-site-link-logo.jpg' in login.text
         assert client.post("/login", data={"password": "ci-test-only"}, follow_redirects=False).status_code == 303
         home = client.get("/")
         assert home.status_code == 200
@@ -21,4 +21,4 @@ def test_brand_logo_is_served_and_present_for_all_roles():
         assert 'id="assignmentForm"' in home.text
         assert 'class="main-nav"' in home.text
         assert 'BAGER <span class="brand-accent">SITE LINK</span>' in home.text
-        assert '/static/bager-site-link-logo.svg' in home.text
+        assert '/static/bager-site-link-logo.jpg' in home.text
