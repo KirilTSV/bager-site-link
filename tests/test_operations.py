@@ -38,3 +38,24 @@ def test_daily_assignments_approval_and_access():
         assert listed.status_code == 200
         assert any(x["id"] == created.json()["id"] for x in listed.json())
         assert client.get("/api/operations/disposal-sites").status_code == 200
+        alternate = client.post("/api/operations/disposal-sites", json={
+            "name": "Резервна площадка", "address": "София, резервен адрес",
+            "latitude": 42.72, "longitude": 23.32})
+        assert alternate.status_code == 201
+        other_id = alternate.json()["id"]
+        assert client.post(f"/api/operations/daily-assignments/{created.json()['id']}/change-site", json={
+            "new_disposal_site_id": other_id, "reason": "Смяна заради ограничен достъп"}).status_code == 400
+        assert client.post(f"/api/operations/disposal-sites/{other_id}/approve").status_code == 200
+        changed = client.post(f"/api/operations/daily-assignments/{created.json()['id']}/change-site", json={
+            "new_disposal_site_id": other_id, "reason": "Смяна заради ограничен достъп"})
+        assert changed.status_code == 200, changed.text
+        assert changed.json()["disposal_site"]["id"] == other_id
+        history = client.get(f"/api/operations/daily-assignments/{created.json()['id']}/history")
+        assert history.status_code == 200
+        assert len(history.json()) == 1
+        assert history.json()[0]["previous_site_id"] == sid
+        assert history.json()[0]["new_site_id"] == other_id
+        updated = client.get("/api/operations/daily-assignments", params={"work_date": data["work_date"]})
+        assert next(x for x in updated.json() if x["id"] == created.json()["id"])["disposal_site"]["id"] == other_id
+        assert client.post(f"/api/operations/daily-assignments/{created.json()['id']}/change-site", json={
+            "new_disposal_site_id": other_id, "reason": "Повторна идентична промяна"}).status_code == 409
