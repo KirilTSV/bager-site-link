@@ -5,3 +5,8 @@
 .brand-logo{display:block;width:76px;height:76px;object-fit:contain;flex-shrink:0;background:#fff;border-radius:10px}
 .brand-logo.small{width:48px;height:48px;border-radius:8px}
 @media(max-width:760px){.brand-logo.small{width:42px;height:42px}.brand b{font-size:12px;letter-spacing:.03em}}
+
+/* Show a legible brand instead of a broken-image icon when the approved asset is missing. */
+.brand-logo-text{display:flex;align-items:center;justify-content:center;flex-direction:column;flex-shrink:0;width:48px;height:48px;padding:3px;border:2px solid #e8b326;border-radius:8px;background:#111c2e;color:#fff;font-size:9px;font-weight:800;line-height:1.15;text-align:center;letter-spacing:.02em}
+.brand-logo-text[hidden],.brand-logo[hidden]{display:none!important}
+@media(max-width:760px){.brand-logo-text{width:42px;height:42px;font-size:8px}}
