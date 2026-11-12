@@ -115,3 +115,57 @@ body:not([data-role="dispatcher"]):not([data-role="owner"]) [data-role-nav="disp
 .login-logo{width:min(220px,70vw);max-height:260px;margin:0 auto 14px}
 @media(max-width:760px){.brand-logo.small{width:56px;max-height:64px}}
 @media(max-width:430px){.brand-logo.small{width:50px;max-height:58px}}
+
+
+/* Approved dashboard direction — phase 1: desktop sidebar, responsive operations canvas.
+   Presentation only: no simulated metrics, GPS points or API changes. */
+@media (min-width: 1100px) {
+  body[data-role="dispatcher"],body[data-role="owner"] { --bsl-sidebar-width: 244px; }
+  body[data-role="dispatcher"] .main-nav,
+  body[data-role="owner"] .main-nav {
+    position:fixed;z-index:9;top:106px;bottom:0;left:0;
+    width:var(--bsl-sidebar-width);max-width:none;
+    display:flex;flex-direction:column;gap:7px;
+    padding:24px 12px 28px;overflow-y:auto;overflow-x:hidden;
+    background:#081421;border-right:1px solid #24364b;
+  }
+  body[data-role="dispatcher"] .main-nav a,
+  body[data-role="owner"] .main-nav a {
+    display:flex;align-items:center;min-height:47px;padding:12px 16px;
+    border:0;border-radius:9px;color:#d6e0eb;font-size:14px;
+    white-space:normal;
+  }
+  body[data-role="dispatcher"] .main-nav a:hover,
+  body[data-role="owner"] .main-nav a:hover {background:#192d42;color:#fff}
+  body[data-role="dispatcher"] .main-nav a.nav-active,
+  body[data-role="owner"] .main-nav a.nav-active {
+    background:#ffc62d;color:#071421;box-shadow:0 4px 18px #ffc62d26;
+  }
+  body[data-role="dispatcher"] .shell,
+  body[data-role="owner"] .shell {
+    margin-left:var(--bsl-sidebar-width);margin-right:0;
+    max-width:none;padding:26px clamp(20px,2.5vw,42px) 58px;
+  }
+  body[data-role="dispatcher"] .topbar,
+  body[data-role="owner"] .topbar {
+    padding-inline:24px;position:sticky;top:0;z-index:12;
+  }
+  body[data-role="dispatcher"] .project-head,
+  body[data-role="owner"] .project-head {
+    min-height:120px;padding:22px 25px;margin-bottom:22px;
+  }
+  body[data-role="dispatcher"] .project-head h1,
+  body[data-role="owner"] .project-head h1 {font-size:clamp(24px,2.5vw,32px)}
+  body[data-role="dispatcher"] .dashboard-workspace,
+  body[data-role="owner"] .dashboard-workspace {grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+}
+@media (min-width: 1100px) and (max-width: 1300px) {
+  body[data-role="dispatcher"] .dashboard-workspace,
+  body[data-role="owner"] .dashboard-workspace {grid-template-columns:1fr}
+}
+@media (max-width: 1099px) {
+  .main-nav a:focus-visible {outline:2px solid #ffc62d;outline-offset:-2px}
+}
+.main-nav a:focus-visible,.primary:focus-visible,.secondary:focus-visible {
+  outline:2px solid #ffe187;outline-offset:2px;
+}
