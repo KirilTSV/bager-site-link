@@ -108,3 +108,10 @@ body:not([data-role="dispatcher"]):not([data-role="owner"]) [data-role-nav="disp
  .brand b{font-size:14px;line-height:1.2}
  .brand-user{font-size:10px}
 }
+
+/* BSL logo fidelity: preserve source aspect ratio, no circular crop */
+.brand-logo,.brand-logo.small,.login-logo{object-fit:contain;object-position:center;border-radius:0!important;border:0!important;box-shadow:none!important;background:transparent!important;width:auto;max-width:100%;height:auto}
+.brand-logo.small{width:64px;max-height:72px}
+.login-logo{width:min(220px,70vw);max-height:260px;margin:0 auto 14px}
+@media(max-width:760px){.brand-logo.small{width:56px;max-height:64px}}
+@media(max-width:430px){.brand-logo.small{width:50px;max-height:58px}}
