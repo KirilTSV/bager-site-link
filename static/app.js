@@ -13,7 +13,19 @@ async function loadOperations(){
   const [sites,assignments]=await Promise.all([api('/api/operations/disposal-sites'),api('/api/operations/daily-assignments?work_date='+encodeURIComponent(day))]);
   $('#assignmentSite').innerHTML='<option value="">Одобрено разтоварище</option>'+sites.filter(x=>x.status==='approved').map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
   $('#siteList').innerHTML=sites.map(x=>'<div class="ops-item"><div><b>'+esc(x.name)+'</b><small>'+esc(x.address)+' · '+(x.status==='approved'?'Одобрено':'Очаква проверка')+'</small></div>'+(x.status!=='approved'?'<button class="secondary" data-approve="'+esc(x.id)+'">Одобри</button>':'<span class="ops-approved">✓</span>')+'</div>').join('')||'<span class="muted">Няма въведени площадки.</span>';
-  $('#assignmentList').innerHTML=assignments.map(x=>'<div class="ops-item"><div><b>'+esc(x.disposal_site.name)+'</b><small>Камион: '+esc(x.truck_asset_id.slice(0,8))+' · Шофьор: '+esc(x.driver_participant_id.slice(0,8))+'</small></div><span class="ops-approved">✓</span></div>').join('')||'<span class="muted">Няма задания за датата.</span>';
+  $('#assignmentList').innerHTML=assignments.map(x=>'<div class="ops-item"><div><b>'+esc(x.disposal_site.name)+'</b><small>Камион: '+esc(x.truck_asset_id.slice(0,8))+' · Шофьор: '+esc(x.driver_participant_id.slice(0,8))+'</small></div><button class="secondary" data-change-assignment="'+esc(x.id)+'">Смени площадка</button></div>').join('')||'<span class="muted">Няма задания за датата.</span>';
+  $('#assignmentList').querySelectorAll('[data-change-assignment]').forEach(b=>b.onclick=async()=>{
+    const choices=sites.filter(x=>x.status==='approved');
+    if(choices.length<2){err(new Error('Нужни са поне две одобрени разтоварища.'));return;}
+    const answer=prompt('Въведи името на новото одобрено разтоварище:\\n'+choices.map(x=>x.name).join('\\n'));
+    if(answer===null)return;
+    const selected=choices.find(x=>x.name.toLocaleLowerCase('bg-BG')===answer.trim().toLocaleLowerCase('bg-BG'));
+    if(!selected){err(new Error('Невалидно име на одобрено разтоварище.'));return;}
+    const reason=prompt('Причина за промяната (поне 10 символа). Историята се запазва.');
+    if(reason===null)return;
+    if(reason.trim().length<10){err(new Error('Опиши конкретна причина с поне 10 символа.'));return;}
+    try{await api('/api/operations/daily-assignments/'+encodeURIComponent(b.dataset.changeAssignment)+'/change-site',{method:'POST',body:JSON.stringify({new_disposal_site_id:selected.id,reason:reason.trim()})});await loadOperations()}catch(e){err(e)}
+  });
   $('#siteList').querySelectorAll('[data-approve]').forEach(b=>b.onclick=async()=>{if(!confirm('Потвърждавате само оперативното одобрение, не законовата допустимост на площадката?'))return;try{await api('/api/operations/disposal-sites/'+encodeURIComponent(b.dataset.approve)+'/approve',{method:'POST'});await loadOperations()}catch(e){err(e)}});
 }
 async function initOperations(assets){
