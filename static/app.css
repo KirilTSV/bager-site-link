@@ -33,3 +33,5 @@ body{background:radial-gradient(ellipse at 50% -10%,#16304a 0%,#071320 50%,#0610
 @media(max-width:430px){.brand-logo.small{width:49px;height:49px}.brand b{font-size:13px}.brand small{font-size:9px}.topbar .small-btn{font-size:11px;padding:8px}.project-head{padding:19px}.kpi-grid{gap:9px}.kpi{padding:13px}.kpi strong{font-size:23px}}
 
 body:not([data-role="dispatcher"]):not([data-role="owner"]) [data-role-nav="dispatcher"]{display:none}
+
+.trip-destination{margin-top:10px;padding:10px 12px;background:#102e38;border:1px solid #2e5962;border-radius:9px;color:#cde4e7;font-size:12px}.trip-destination strong{color:#fff}.trip-destination small{display:block;margin-top:4px}.trip-destination.warning{background:#36281b;border-color:#795b34;color:#f9d7a3}
