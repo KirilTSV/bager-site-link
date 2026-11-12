@@ -1,6 +1,7 @@
 """Isolated acceptance checks for daily assignments and scoped disposal sites."""
 import uuid
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from app.asgi import app
 from app.db import SessionLocal
@@ -26,7 +27,7 @@ def test_daily_assignments_approval_and_access():
             db.add(driver)
             db.commit()
             truck_id, driver_id = truck.id, driver.id
-        data = {"work_date": date.today().isoformat(), "truck_asset_id": truck_id,
+        data = {"work_date": datetime.now(ZoneInfo('Europe/Sofia')).date().isoformat(), "truck_asset_id": truck_id,
                 "driver_participant_id": driver_id, "disposal_site_id": sid}
         assert client.post("/api/operations/daily-assignments", json=data).status_code == 400
         assert client.post(f"/api/operations/disposal-sites/{sid}/approve").status_code == 200
