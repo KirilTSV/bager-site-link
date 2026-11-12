@@ -347,6 +347,10 @@ def revoke_invitation(invitation_id:str,p:Participant=Depends(require_roles("own
     if not inv: raise HTTPException(404,"Поканата не е намерена")
     inv.revoked=True; db.commit(); return {"ok":True,"revoked":True}
 
+@app.get("/api/participants")
+def list_project_participants(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
+    return [{"id":x.id,"display_name":x.display_name,"role":x.role,"asset_id":x.asset_id,"status":x.status} for x in db.query(Participant).filter_by(project_id=p.project_id).all()]
+
 @app.get("/api/assets")
 def assets(p:Participant=Depends(require_roles("owner","dispatcher","site_manager")),db:Session=Depends(get_db)):
     return [{"id":a.id,"code":a.code,"type":a.asset_type} for a in db.query(Asset).filter_by(project_id=p.project_id).all()]
