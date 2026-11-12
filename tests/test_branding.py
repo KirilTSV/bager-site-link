@@ -17,4 +17,8 @@ def test_brand_logo_is_served_and_present_for_all_roles():
         assert home.status_code == 200
         assert '<header class="topbar">' in home.text
         assert 'class="brand-logo small"' in home.text
+        assert 'id="operationsPanel"' in home.text
+        assert 'id="assignmentForm"' in home.text
+        assert 'class="main-nav"' in home.text
+        assert 'BAGER <span class="brand-accent">SITE LINK</span>' in home.text
         assert '/static/bager-site-link-logo.svg' in home.text
