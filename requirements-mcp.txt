@@ -1,0 +1,4 @@
+# Separate MCP service dependencies; do not install into the production web process without staging review.
+-r requirements.txt
+mcp>=1.15,<2
+PyJWT[crypto]>=2.10,<3
