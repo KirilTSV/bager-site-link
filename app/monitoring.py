@@ -53,7 +53,7 @@ def evaluate_project(db: Session, project_id: str, organization_id: str,
     for alert in alerts:
         # Stable ID for an unchanged signal: repeated scans do not spam the audit ledger.
         fingerprint = json.dumps([project_id, alert["code"], alert["entity_id"],
-                                  alert["evidence"]], sort_keys=True, ensure_ascii=False)
+                                  utcnow().date().isoformat()], sort_keys=True, ensure_ascii=False)
         event_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "bager-monitor-v1:" + fingerprint))
         if db.get(Event, event_id) is not None:
             continue
