@@ -363,5 +363,9 @@ def health(db: Session=Depends(get_db)):
         raise HTTPException(status_code=503, detail="Базата данни не отговаря")
     return {"status":"ok", "app":"BAGER SITE LINK", "version":"1.0.1", "database":"connected"}
 
+from .monitoring import router as monitoring_router, register_routes as register_monitoring_routes
+register_monitoring_routes(require_roles)
+app.include_router(monitoring_router)
+
 @app.get("/manifest.webmanifest")
 def manifest(): return JSONResponse({"name":"BAGER SITE LINK","short_name":"BAGER","start_url":"/","display":"standalone","background_color":"#0b1220","theme_color":"#111c2e","icons":[]})
