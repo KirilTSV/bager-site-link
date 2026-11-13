@@ -124,9 +124,12 @@ class OAuthBoundary:
         self.subject_map = subject_map
 
     async def __call__(self, scope, receive, send):
+        if scope["type"] == "lifespan":
+            await self.inner(scope, receive, send)
+            return
         if scope["type"] != "http":
-            # No websocket transport supported.
-            await send({"type": "websocket.close", "code": 1008}) if scope["type"] == "websocket" else None
+            if scope["type"] == "websocket":
+                await send({"type": "websocket.close", "code": 1008})
             return
         headers = {k.lower(): v for k, v in scope.get("headers", [])}
         auth = headers.get(b"authorization", b"").decode("latin1")
