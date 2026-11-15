@@ -12,7 +12,7 @@ class ParticipantTemplateContractTests(unittest.TestCase):
         for view in expected:
             with self.subTest(view=view):
                 self.assertEqual(len(re.findall(r'id="' + view + r'"', html)), 1)
-                self.assertRegex(html, r'<section\\b[^>]*\\bid="' + view + r'"')
+                self.assertRegex(html, r'<section\b[^>]*\bid="' + view + r'"')
 
     def test_role_views_share_accessible_branded_header(self):
         html = TEMPLATE.read_text(encoding="utf-8")
